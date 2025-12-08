@@ -11,8 +11,33 @@ const PhoneInput = dynamic(
 );
 
 export default function WellnessForm() {
+  const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('+1');
+  const [submitted, setSubmitted] = useState(false);
   const [email, setEmail] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log('Full Name:', fullName);
+    console.log('Email:', email);
+    console.log('Phone:', phone);
+    try {
+      await fetch('https://services.leadconnectorhq.com/hooks/7ZyRIymMAHtKkhNQ5p4M/webhook-trigger/127bab01-c988-4adf-b523-b5b591f9b31f', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          FullName: fullName,
+          Email: email,
+          Phone: phone,
+        }),
+      });
+      setSubmitted(true);
+    } catch (error) {
+      console.error('Webhook error:', error);
+    }
+  };
 
   return (
     <div className='min-h-screen bg-gray-50'>
@@ -33,58 +58,75 @@ export default function WellnessForm() {
               Sign up for new products added, special offers, and more.
             </p>
 
-            <form className='mx-auto space-y-1 max-w-[80%]'>
-              <div>
-                <input
-                  type='email'
-                  placeholder='Email'
-                  className='w-full px-4 py-3 border border-black-300 rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
 
-              <PhoneInput
-                country={'us'}
-                value={phone}
-                onChange={phone => setPhone(phone)}
-                containerClass='phone-input-container'
-                inputProps={{
-                  name: 'phone',
-                  required: true,
-                }}
-              />
+            {submitted ? (
+              <p className="mt-4 text-center text-green-600 font-medium">Thanks for your submission</p>
+            ) :
+              (
+                <form className='mx-auto space-y-1 max-w-[80%]' onSubmit={handleSubmit}>
+                  <div>
+                    <input
+                      type='text'
+                      placeholder='Full Name'
+                      className='w-full px-4 py-3 border border-black-300 rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <input
+                      type='email'
+                      placeholder='Email'
+                      className='w-full px-4 py-3 border border-black-300 rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
+                  </div>
 
-              <div className='flex items-center'>
-                <input
-                  type='checkbox'
-                  id='marketing'
-                  className='mt-1 w-6 h-6 text-blue-600 border-black rounded-md focus:ring-blue-500'
-                />
-                <div className=''>
+                  <PhoneInput
+                    country={'us'}
+                    value={phone}
+                    onChange={phone => setPhone(phone)}
+                    containerClass='phone-input-container'
+                    inputProps={{
+                      name: 'phone',
+                      required: true,
+                    }}
+                  />
 
-                  <label htmlFor='marketing' className='text-[12px] text-gray-600 ml-2'>
-                    Yes, sign me for sms and email marketing from FrontCare.
-                  </label>
-                  <a href='#' className='text-center text-[12px] text-gray-600 block underline mx-auto'>
-                    Privacy Policy
-                  </a>
-                </div>
-              </div>
+                  <div className='flex items-center'>
+                    <input
+                      type='checkbox'
+                      id='marketing'
+                      className='mt-1 w-6 h-6 text-blue-600 border-black rounded-md focus:ring-blue-500'
+                      required
+                    />
+                    <div className='mt-2 mb-4'>
 
-              <button
-                type='submit'
-                className='w-full bg-black text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition-colors'
-              >
-                YES PLEASE
-              </button>
+                      <label htmlFor='marketing' className='text-[12px] text-gray-600 ml-2'>
+                        Yes, sign me for sms and email marketing from FrontCare.
+                      </label>
+                      <a href='https://www.frontcare.com/privacy-policy-shoppers/' className='text-center text-[12px] text-gray-600 block underline mx-auto'>
+                        Privacy Policy
+                      </a>
+                    </div>
+                  </div>
 
-              <div className='text-center'>
-                <a href='#' className='text-gray-600 hover:text-gray-800'>
-                  No Thanks
-                </a>
-              </div>
-            </form>
+                  <button
+                    type='submit'
+                    className='w-full bg-black text-white py-3 px-6 rounded-lg font-semibold cursor-pointer'
+                  >
+                    YES PLEASE
+                  </button>
+
+                  <div className='text-center'>
+                    <a href='#' className='text-black hover:text-gray-800 underline'>
+                      No Thanks
+                    </a>
+                  </div>
+                </form>
+              )
+            }
           </div>
         </div>
       </div>

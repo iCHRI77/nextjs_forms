@@ -1,0 +1,93 @@
+"use client";
+import dynamic from 'next/dynamic';
+import { useState } from 'react';
+// Reemplaza la importación directa de PhoneInput con:
+const PhoneInput = dynamic(
+  () => import('react-phone-input-2'),
+  {
+    ssr: false, // Desactiva SSR para este componente
+    loading: () => <input type="tel" className="w-full px-4 py-3 border border-black-300 rounded-lg" />
+  }
+);
+
+export default function WellnessForm() {
+  const [phone, setPhone] = useState('+1');
+  const [email, setEmail] = useState('');
+
+  return (
+    <div className='min-h-screen bg-gray-50'>
+      <div className='max-w-5xl mx-auto p-8'>
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-8'>
+          {/* Left column - Images - Hidden on mobile */}
+          <div className='hidden md:flex justify-center items-center'>
+            <img src="left_img.png" className='w-full h-auto max-w-full rounded-lg' />
+          </div>
+
+          {/* Right column - Form */}
+          <div className='mx-auto flex flex-col justify-center max-w-[100%] min-w-[500px]'>
+            <img className='mx-auto' src="front_care_logo.png" alt="logo" width={125} />
+            <h1 className='mx-auto text-center mt-4 text-4xl font-bold text-gray-900 mb-4 font-gilda-display max-w-[90%]'>
+              Stay on top of your Wellness
+            </h1>
+            <p className='mx-auto text-center mt-4 text-gray-600 mb-8 max-w-[70%]'>
+              Sign up for new products added, special offers, and more.
+            </p>
+
+            <form className='mx-auto space-y-1 max-w-[80%]'>
+              <div>
+                <input
+                  type='email'
+                  placeholder='Email'
+                  className='w-full px-4 py-3 border border-black-300 rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+
+              <PhoneInput
+                country={'us'}
+                value={phone}
+                onChange={phone => setPhone(phone)}
+                containerClass='phone-input-container'
+                inputProps={{
+                  name: 'phone',
+                  required: true,
+                }}
+              />
+
+              <div className='flex items-center'>
+                <input
+                  type='checkbox'
+                  id='marketing'
+                  className='mt-1 w-6 h-6 text-blue-600 border-black rounded-md focus:ring-blue-500'
+                />
+                <div className=''>
+
+                  <label htmlFor='marketing' className='text-[12px] text-gray-600 ml-2'>
+                    Yes, sign me for sms and email marketing from FrontCare.
+                  </label>
+                  <a href='#' className='text-center text-[12px] text-gray-600 block underline mx-auto'>
+                    Privacy Policy
+                  </a>
+                </div>
+              </div>
+
+              <button
+                type='submit'
+                className='w-full bg-black text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition-colors'
+              >
+                YES PLEASE
+              </button>
+
+              <div className='text-center'>
+                <a href='#' className='text-gray-600 hover:text-gray-800'>
+                  No Thanks
+                </a>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

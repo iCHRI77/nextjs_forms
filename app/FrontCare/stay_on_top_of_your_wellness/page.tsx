@@ -120,7 +120,7 @@ export default function WellnessForm() {
                   </button>
 
                   <div className='text-center'>
-                    <a href='#' className='text-black hover:text-gray-800 underline'>
+                    <a href='https://www.frontcare.com/' className='text-black hover:text-gray-800 underline'>
                       No Thanks
                     </a>
                   </div>

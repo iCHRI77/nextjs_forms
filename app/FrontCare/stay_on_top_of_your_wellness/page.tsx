@@ -45,7 +45,7 @@ export default function WellnessForm() {
         <div className='grid grid-cols-1 md:grid-cols-2 gap-8'>
           {/* Left column - Images - Hidden on mobile */}
           <div className='hidden md:flex justify-center items-center'>
-            <img src="left_img.png" className='w-full h-auto max-w-full rounded-lg' />
+            <img src="left_img.png" className='w-full h-auto max-w-full' />
           </div>
 
           {/* Right column - Form */}
@@ -101,7 +101,7 @@ export default function WellnessForm() {
                       className='mt-1 w-6 h-6 text-blue-600 border-black rounded-md focus:ring-blue-500'
                       required
                     />
-                    <div className='mt-2 mb-4'>
+                    <div className='mt-2 mb-4   '>
 
                       <label htmlFor='marketing' className='text-[12px] text-gray-600 ml-2'>
                         Yes, sign me for sms and email marketing from FrontCare.

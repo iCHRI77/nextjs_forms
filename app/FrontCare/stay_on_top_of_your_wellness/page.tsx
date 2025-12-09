@@ -50,7 +50,7 @@ export default function WellnessForm() {
 
           {/* Right column - Form */}
           <div className='mx-auto flex flex-col justify-center max-w-[100%]'>
-            <img className='mx-auto' src="front_care_logo.png" alt="logo" width={125} />
+            <img className='mx-auto' src="FrontCareLogo.png" alt="logo" width={125} />
             <h1 className='mx-auto text-center mt-4 text-4xl font-bold text-gray-900 mb-4 font-gilda-display max-w-[90%]'>
               Stay on top of your Wellness
             </h1>

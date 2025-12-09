@@ -40,7 +40,7 @@ export default function WellnessForm() {
   };
 
   return (
-    <div className='min-h-screen bg-gray-50'>
+    <div className='min-h-screen bg-white'>
       <div className='max-w-5xl mx-auto p-8'>
         <div className='grid grid-cols-1 md:grid-cols-2 gap-8'>
           {/* Left column - Images - Hidden on mobile */}
@@ -49,7 +49,7 @@ export default function WellnessForm() {
           </div>
 
           {/* Right column - Form */}
-          <div className='mx-auto flex flex-col justify-center max-w-[100%] min-w-[500px]'>
+          <div className='mx-auto flex flex-col justify-center max-w-[100%]'>
             <img className='mx-auto' src="front_care_logo.png" alt="logo" width={125} />
             <h1 className='mx-auto text-center mt-4 text-4xl font-bold text-gray-900 mb-4 font-gilda-display max-w-[90%]'>
               Stay on top of your Wellness

@@ -41,7 +41,7 @@ export default function WellnessForm() {
 
   return (
     <div className='min-h-screen bg-white'>
-      <div className='max-w-5xl mx-auto p-8'>
+      <div className='max-w-6xl mx-auto p-8'>
         <div className='grid grid-cols-1 md:grid-cols-2 gap-8'>
           {/* Left column - Images - Hidden on mobile */}
           <div className='hidden md:flex justify-center items-center'>
@@ -49,12 +49,12 @@ export default function WellnessForm() {
           </div>
 
           {/* Right column - Form */}
-          <div className='mx-auto flex flex-col justify-center max-w-[100%]'>
+          <div className='mx-auto flex flex-col justify-center max-w-[100%] gap-4'>
             <img className='mx-auto' src="FrontCareLogo.png" alt="logo" width={125} />
-            <h1 className='mx-auto text-center mt-4 text-4xl font-bold text-gray-900 mb-4 font-gilda-display max-w-[90%]'>
+            <h1 className='mx-auto text-center mt-12 text-4xl font-bold text-gray-900 mb-4 font-gilda-display max-w-[90%]'>
               Stay on top of your Wellness
             </h1>
-            <p className='mx-auto text-center mt-4 text-gray-600 mb-8 max-w-[70%]'>
+            <p className='mx-auto text-center mt-4 text-gray-600 mb-5 max-w-[70%]'>
               Sign up for new products added, special offers, and more.
             </p>
 
@@ -63,7 +63,7 @@ export default function WellnessForm() {
               <p className="mt-4 text-center text-green-600 font-medium">Thanks for your submission</p>
             ) :
               (
-                <form className='mx-auto space-y-1 max-w-[80%]' onSubmit={handleSubmit}>
+                <form className='mx-auto space-y-1 max-w-[85%] sm:max-w-[85%] min-w-[85%] sm:min-w-[85%]' onSubmit={handleSubmit}>
                   <div>
                     <input
                       type='text'
@@ -94,21 +94,26 @@ export default function WellnessForm() {
                     }}
                   />
 
-                  <div className='flex items-center'>
-                    <input
-                      type='checkbox'
-                      id='marketing'
-                      className='mt-1 w-6 h-6 text-blue-600 border-black rounded-md focus:ring-blue-500'
-                      required
-                    />
-                    <div className='mt-2 mb-4   '>
+                  <div className='mb-4 mt-2'>
+                    <div className='flex items-center'>
+                      <input
+                        type='checkbox'
+                        id='marketing'
+                        className='flex-none w-7 h-7 text-blue-600 border-black rounded-lg focus:ring-blue-500'
+                        style={{
+                          borderRadius: '15px !important',
+                        }}
+                        required
+                      />
 
-                      <label htmlFor='marketing' className='text-[12px] text-gray-600 ml-2'>
-                        Yes, sign me for sms and email marketing from FrontCare.
-                      </label>
-                      <a href='https://www.frontcare.com/privacy-policy-shoppers/' className='text-center text-[12px] text-gray-600 block underline mx-auto'>
-                        Privacy Policy
-                      </a>
+                      <div className='mx-auto'>
+                        <label htmlFor='marketing' className='flex-auto text-[10px] sm:text-[10px] lg:text-[12px] text-gray-600 text-center whitespace-nowrap tracking-tight leading-none'>
+                          Yes, sign me for sms and email marketing from FrontCare.
+                        </label>
+                        <a href='https://www.frontcare.com/privacy-policy-shoppers/' className='flex-auto block underline text-[10px] sm:text-[10px] lg:text-[12px] text-gray-600 text-center tracking-tight leading-none -mt-[2px]'>
+                          Privacy Policy
+                        </a>
+                      </div>
                     </div>
                   </div>
 
@@ -120,9 +125,9 @@ export default function WellnessForm() {
                   </button>
 
                   <div className='text-center'>
-                    <a href='https://www.frontcare.com/' className='text-black hover:text-gray-800 underline'>
+                    <button onClick={() => window.location.href = 'https://www.frontcare.com/'} className='w-full text-center py-3 px-6 text-black hover:text-gray-800 underline'>
                       No Thanks
-                    </a>
+                    </button>
                   </div>
                 </form>
               )

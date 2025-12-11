@@ -96,21 +96,32 @@ export default function WellnessForm() {
 
                   <div className='mb-4 mt-2'>
                     <div className='flex items-center'>
-                      <input
-                        type='checkbox'
-                        id='marketing'
-                        className='flex-none w-7 h-7 text-blue-600 border-black rounded-lg focus:ring-blue-500'
-                        style={{
-                          borderRadius: '15px !important',
-                        }}
-                        required
-                      />
+                      <div className='relative flex-none w-7 h-7'>
+                        <input
+                          type='checkbox'
+                          id='marketing'
+                          className='peer appearance-none w-full h-full border border-black rounded-lg bg-white checked:bg-blue-600 focus:ring-2 focus:ring-blue-500 transition-colors cursor-pointer'
+                          required
+                        />
+                        <svg
+                          className='absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-4 h-4 text-white pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity'
+                          xmlns='http://www.w3.org/2000/svg'
+                          viewBox='0 0 24 24'
+                          fill='none'
+                          stroke='currentColor'
+                          strokeWidth='3'
+                          strokeLinecap='round'
+                          strokeLinejoin='round'
+                        >
+                          <polyline points='20 6 9 17 4 12'></polyline>
+                        </svg>
+                      </div>
 
                       <div className='mx-auto'>
-                        <label htmlFor='marketing' className='flex-auto text-[10px] sm:text-[10px] lg:text-[12px] text-gray-600 text-center whitespace-nowrap tracking-tight leading-none'>
+                        <label htmlFor='marketing' className='flex-auto text-[10px] sm:text-[10px] lg:text-[12px] text-black text-center whitespace-nowrap tracking-tight leading-none'>
                           Yes, sign me for sms and email marketing from FrontCare.
                         </label>
-                        <a href='https://www.frontcare.com/privacy-policy-shoppers/' className='flex-auto block underline text-[10px] sm:text-[10px] lg:text-[12px] text-gray-600 text-center tracking-tight leading-none -mt-[2px]'>
+                        <a href='https://www.frontcare.com/privacy-policy-shoppers/' className='flex-auto block underline text-[10px] sm:text-[10px] lg:text-[12px] text-black text-center tracking-tight leading-none -mt-[2px] mr-[10%] '>
                           Privacy Policy
                         </a>
                       </div>

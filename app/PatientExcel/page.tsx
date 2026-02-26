@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -125,6 +125,115 @@ const CheckboxGroup = ({ label, values, onChange, options, required = false, des
         </div>
     </div>
 );
+
+const AddressAutocomplete = ({ label, value, onChange, onSelect, required = false, description = '' }: any) => {
+    const [suggestions, setSuggestions] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const wrapperRef = useRef<HTMLDivElement>(null);
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+                setShowSuggestions(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const fetchSuggestions = async (query: string) => {
+        if (!query || query.length < 3) {
+            setSuggestions([]);
+            return;
+        }
+        setLoading(true);
+        try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=1&limit=5`, {
+                headers: {
+                    'Accept-Language': 'en-US,en;q=0.9'
+                }
+            });
+            const data = await response.json();
+            setSuggestions(data);
+            setShowSuggestions(true);
+        } catch (error) {
+            console.error('Error fetching addresses:', error);
+        }
+        setLoading(false);
+    };
+
+    const handleSelect = (item: any) => {
+        let streetAddress = item.display_name.split(',')[0];
+        if (item.address?.road) {
+            streetAddress = item.address.house_number ? `${item.address.house_number} ${item.address.road}` : item.address.road;
+        }
+        onChange({ target: { value: streetAddress } });
+        setShowSuggestions(false);
+        onSelect(item.address || {});
+    };
+
+    return (
+        <div className="flex flex-col w-full h-full mb-6 relative" ref={wrapperRef}>
+            <div className="mb-2">
+                {label && <label className="text-sm font-semibold text-gray-800 block leading-snug">{label} {required && <span className="text-red-500">*</span>}</label>}
+                {description && <p className="text-xs text-gray-500 mt-1 italic leading-tight">{description}</p>}
+            </div>
+            <div className="mt-auto relative">
+                <input
+                    type="text"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    required={required}
+                    placeholder={label}
+                    value={value}
+                    onChange={(e) => {
+                        onChange(e);
+                        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+                        timeoutRef.current = setTimeout(() => fetchSuggestions(e.target.value), 500);
+                    }}
+                    onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
+                />
+
+                {loading && (
+                    <div className="absolute right-3 top-[14px]">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
+                    </div>
+                )}
+
+                <AnimatePresence>
+                    {showSuggestions && suggestions.length > 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden"
+                        >
+                            <ul className="max-h-60 overflow-y-auto m-0 p-0 list-none">
+                                {suggestions.map((item, index) => {
+                                    let streetAddress = item.display_name.split(',')[0];
+                                    if (item.address?.road) {
+                                        streetAddress = item.address.house_number ? `${item.address.house_number} ${item.address.road}` : item.address.road;
+                                    }
+                                    return (
+                                        <li
+                                            key={index}
+                                            onClick={() => handleSelect(item)}
+                                            className="px-4 py-3 cursor-pointer hover:bg-blue-50 text-sm border-b border-gray-100 last:border-0"
+                                        >
+                                            <div className="font-medium text-gray-800">{streetAddress}</div>
+                                            <div className="text-xs text-gray-500 truncate">{item.display_name}</div>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
+        </div>
+    );
+};
 
 const TagInput = ({ label, values = [], onChange, placeholder = 'Type and press Enter', required = false, description = '' }: any) => {
     const [inputValue, setInputValue] = useState('');
@@ -299,6 +408,32 @@ export default function PatientExcel() {
     const [submitted, setSubmitted] = useState(false);
     const [loading, setLoading] = useState(false);
     const [currentStep, setCurrentStep] = useState(0);
+    const stepNavRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (stepNavRef.current && stepNavRef.current.children[0]) {
+            const container = stepNavRef.current;
+            const buttonContainer = container.children[0] as HTMLElement;
+            const activeButton = buttonContainer.children[currentStep] as HTMLElement;
+
+            if (activeButton && container) {
+                const containerRect = container.getBoundingClientRect();
+                const buttonRect = activeButton.getBoundingClientRect();
+
+                // Calculate how far off the center the button currently is
+                const containerCenter = containerRect.left + (containerRect.width / 2);
+                const buttonCenter = buttonRect.left + (buttonRect.width / 2);
+
+                const scrollOffset = buttonCenter - containerCenter;
+
+                // Smoothly scroll by the exact difference needed to center it
+                container.scrollBy({
+                    left: scrollOffset,
+                    behavior: 'smooth'
+                });
+            }
+        }
+    }, [currentStep]);
 
     const handleAutoFill = () => {
         setFormData({
@@ -374,11 +509,84 @@ export default function PatientExcel() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
+    const isStepComplete = (index: number): boolean => {
+        switch (index) {
+            case 0:
+                return !!(formData.clientFullName && formData.mainOfficePhone && formData.dentalPracticeName);
+            case 1:
+                return !!(formData.streetAddress && formData.city && formData.state && formData.zipCode && formData.country && formData.multipleLocations && formData.timeZone);
+            case 2:
+                return !!formData.receiveLeadNotifications;
+            case 3:
+                const hasTimeSlot = Object.values(formData.consultationTimeSlots || {}).some(val => !!val);
+                return !!(hasTimeSlot && formData.sameDayAppointments && formData.appointmentDetails?.minAppointmentNotice && formData.appointmentDetails?.appointmentDuration && formData.appointmentDetails?.maxAppointmentsPerDay && formData.appointmentDetails?.noCallNoShowFee && formData.apptDetailsEmail && formData.surveyEmail);
+            case 4:
+                if (!formData.treatmentsPromoted || formData.treatmentsPromoted.length === 0) return false;
+                if (formData.treatmentsPromoted.includes('Dental Implants')) {
+                    if (!formData.implantIncluded || formData.implantIncluded.length === 0 ||
+                        !formData.implantPricingRange?.FixedZirconiaArch ||
+                        !formData.implantPricingRange?.HybridFixedSolution ||
+                        !formData.implantPricingRange?.SnapOn ||
+                        !formData.implantPricingRange?.SingleImplant ||
+                        !formData.zirconiaIncluded || formData.zirconiaIncluded.length === 0 ||
+                        !formData.hybridIncluded || formData.hybridIncluded.length === 0 ||
+                        !formData.snapOnIncluded || formData.snapOnIncluded.length === 0 ||
+                        !formData.singleIncluded || formData.singleIncluded.length === 0) {
+                        return false;
+                    }
+                }
+                if (formData.treatmentsPromoted.includes('Invisalign / Clear Aligners')) {
+                    if (!formData.invisalignBrand || !formData.invisalignDiscount ||
+                        !formData.invisalignPriceComp || !formData.invisalignPriceExpress) {
+                        return false;
+                    }
+                }
+                return true;
+            case 5:
+                return !!(formData.pricingNewExamXRays && formData.pricingNewExamCleaning &&
+                    formData.pricingBasicCleaning && formData.pricingDeepCleaning &&
+                    formData.pricingExtraction && formData.pricingInvisalign &&
+                    formData.pricingWhitening && formData.pricingCrowns &&
+                    formData.pricingVeneers && formData.pricingBridge);
+            case 6:
+                return !!(formData.financingOptions && formData.financingOptions.length > 0);
+            case 7:
+                return !!(formData.insuranceAccepted && formData.insuranceAccepted.length > 0 &&
+                    formData.networkStatus && formData.networkStatus.length > 0);
+            case 8:
+                return !!(formData.dailyAdSpend && formData.hasMarketingAssets && formData.nearbyLandmarks);
+            case 9:
+                return !!(formData.legalBusinessName && formData.businessType && formData.businessEIN && formData.businessEmail && formData.businessWebsite);
+            default:
+                return false;
+        }
+    };
+
     const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        const validateFormLocally = (): number => {
+            for (let i = 0; i < steps.length; i++) {
+                if (!isStepComplete(i)) {
+                    return i;
+                }
+            }
+            return -1;
+        };
+
         if (currentStep < steps.length - 1) {
             handleNext();
         } else {
+            const invalidStep = validateFormLocally();
+            if (invalidStep !== -1) {
+                setCurrentStep(invalidStep);
+                setTimeout(() => {
+                    const form = e.target as HTMLFormElement;
+                    form.reportValidity();
+                }, 400); // Ensure Framer Motion animation completes before reporting validity
+                return;
+            }
+
             setLoading(true);
             try {
                 // Send data to the desired webhook for the OTHER GHL SUBACCOUNT
@@ -476,7 +684,21 @@ export default function PatientExcel() {
             title: "Practice Address",
             content: (
                 <Section title="Practice Address">
-                    <InputField label="Street Address" value={formData.streetAddress} onChange={handleTextChange('streetAddress')} required />
+                    <AddressAutocomplete
+                        label="Street Address"
+                        value={formData.streetAddress}
+                        onChange={(e: any) => setFormData((prev: any) => ({ ...prev, streetAddress: e.target.value }))}
+                        onSelect={(address: any) => {
+                            setFormData((prev: any) => ({
+                                ...prev,
+                                city: address.city || address.town || address.village || '',
+                                state: address.state || '',
+                                zipCode: address.postcode || '',
+                                country: address.country || ''
+                            }));
+                        }}
+                        required
+                    />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
                         <InputField label="City" value={formData.city} onChange={handleTextChange('city')} required />
                         <InputField label="State" value={formData.state} onChange={handleTextChange('state')} required />
@@ -525,22 +747,22 @@ export default function PatientExcel() {
                         onChange={handleTextChange('receiveLeadNotifications')}
                         options={['Yes', 'No']}
                         required
-                        description="Notifications can be helpful if a lead opts in and then calls your practice directly. You will still receive a lead tracking sheet regardless."
+                        description={
+                            <>
+                                **Lead notifications are optional. You will still receive a lead tracking sheet documenting all opt-ins.<br />
+                                **Notifications can be helpful if a lead opts in and then calls your practice directly, allowing you to quickly identify the lead source.
+                            </>
+                        }
                     />
                     {formData.receiveLeadNotifications === 'Yes' && (
                         <InputField
                             label="If yes, email for lead notifications"
                             value={formData.leadNotificationEmail}
                             onChange={handleTextChange('leadNotificationEmail')}
-                            type="email"
-                            description="(typically the main front desk email)"
+                            type="text"
+                            description="(For multiple emails, separate them with commas. Typically the main front desk email)"
                         />
                     )}
-
-                    <p className='text-xs text-gray-500 mb-2 italic'>
-                        **Lead notifications are optional. You will still receive a lead tracking sheet documenting all opt-ins.<br />
-                        **Notifications can be helpful if a lead opts in and then calls your practice directly, allowing you to quickly identify the lead source.
-                    </p>
                 </Section>
             )
         },
@@ -551,7 +773,9 @@ export default function PatientExcel() {
                     <div className="flex flex-col gap-2 w-full mb-6 text-black relative">
                         <label className="text-sm font-semibold text-gray-800 relative z-10">What designated consultation time slots are reserved for patients scheduled by our team? <span className="text-red-500">*</span></label>
                         <input type="text" className="absolute top-0 left-0 w-full h-10 opacity-0 pointer-events-none" value={Object.values(formData.consultationTimeSlots).some(val => val) ? 'filled' : ''} onChange={() => { }} required />
-                        <p className="text-xs text-gray-500 mb-2 italic relative z-10">Most offices either set aside specific blocks or allow full scheduling flexibility based on available ops or PMS capacity.</p>
+                        <p className='text-xs text-gray-500 mb-2 italic'>
+                            **Most offices either set aside specific blocks or allow full scheduling flexibility based on available ops or PMS capacity.<br />
+                        </p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
                             {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => (
                                 <div key={day} className="flex flex-col xl:flex-row xl:items-center gap-2">
@@ -573,7 +797,6 @@ export default function PatientExcel() {
                             ))}
                         </div>
                         <p className='text-xs text-gray-500 mb-2 italic'>
-                            **Most offices either set aside specific blocks or allow full scheduling flexibility based on available ops or PMS capacity.<br />
                             **Best practices include offering as much availability as possible, with a healthy balance of morning and afternoon appointments to accommodate patient schedules.
                         </p>
                     </div>
@@ -626,29 +849,23 @@ export default function PatientExcel() {
                         label="When a patient is scheduled by our team, which email should receive the appointment details and Slack invite?"
                         value={formData.apptDetailsEmail}
                         onChange={handleTextChange('apptDetailsEmail')}
-                        type="email"
+                        type="text"
                         required
-                        description="Slack allows a maximum of two seats. We recommend inviting the main office email."
+                        description="**(For multiple emails, separate them with commas) Slack allows a maximum of two seats. We recommend inviting the main office email, which can be used by all team members to log in using a six-digit code sent to that inbox. There is no limit on the number of users or devices logged in at the same time."
                     />
 
                     <p className='text-xs text-gray-500 mb-2 italic'>
-                        **Patients should be added to your PMS as quickly as possible so they receive standard confirmation and reminder messages, which supports higher show rates.<br />
-                        **Slack allows a maximum of two seats. We recommend inviting the main office email, which can be used by all team members to log in using a six-digit code sent to that inbox. There is no limit on the number of users or devices logged in at the same time.
+                        **Patients should be added to your PMS as quickly as possible so they receive standard confirmation and reminder messages, which supports higher show rates.
                     </p>
 
                     <InputField
                         label="Which email address should receive the quick post-appointment survey that reports how the appointment went?"
                         value={formData.surveyEmail}
                         onChange={handleTextChange('surveyEmail')}
-                        type="email"
+                        type="text"
                         required
-                        description="Surveys are sent automatically one hour after the patient’s appointment start time."
+                        description="**(For multiple emails, separate them with commas) Surveys are sent automatically one hour after the patient’s appointment start time. They include quick multiple-choice questions and take roughly 30 seconds to complete."
                     />
-
-                    <p className='text-xs text-gray-500 mb-2 italic'>
-                        **Surveys are sent automatically one hour after the patient’s appointment start time. They include quick multiple-choice questions and take roughly 30 seconds to complete.<br />
-                        **The survey link is also included in the appointment confirmation message sent by your PMS.
-                    </p>
                 </Section>
             )
         },
@@ -799,53 +1016,68 @@ export default function PatientExcel() {
                                         </div>
                                     </div>
                                     <InputField label="Any Additional notes" value={formData.invisalignNotes} onChange={handleTextChange('invisalignNotes')} multiline />
-                                    <div className="mt-4 pt-4 border-t border-gray-200">
-                                        <h3 className="text-lg font-bold text-gray-800 mb-4">Pricing for Other Common Services <span className="text-red-500">*</span></h3>
-                                        <p className="text-sm text-gray-600 mt-2 mb-6 italic">**For internal reference only. These prices will not be used in marketing materials and are intended to help answer patient inquiries.</p>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5 mb-8">
-                                            <InputField label="New patient exam & X-rays:" value={formData.pricingNewExamXRays} onChange={handleTextChange('pricingNewExamXRays')} required />
-                                            <InputField label="New patient exam, X-rays & Basic Cleaning:" value={formData.pricingNewExamCleaning} onChange={handleTextChange('pricingNewExamCleaning')} required />
-                                            <InputField label="Basic Cleaning (standalone, if available):" value={formData.pricingBasicCleaning} onChange={handleTextChange('pricingBasicCleaning')} required />
-                                            <InputField label="Deep cleaning (Per quadrant, Full mouth):" value={formData.pricingDeepCleaning} onChange={handleTextChange('pricingDeepCleaning')} required />
-                                            <InputField label="Extraction (Simple to surgical price range):" value={formData.pricingExtraction} onChange={handleTextChange('pricingExtraction')} required />
-                                            <InputField label="Invisalign/clear aligners:" value={formData.pricingInvisalign} onChange={handleTextChange('pricingInvisalign')} required />
-                                            <InputField label="Teeth whitening (In-house & Take-home):" value={formData.pricingWhitening} onChange={handleTextChange('pricingWhitening')} required />
-                                            <InputField label="Crowns (including buildup):" value={formData.pricingCrowns} onChange={handleTextChange('pricingCrowns')} required />
-                                            <InputField label="Veneers:" value={formData.pricingVeneers} onChange={handleTextChange('pricingVeneers')} required />
-                                            <InputField label="Bridge (per unit):" value={formData.pricingBridge} onChange={handleTextChange('pricingBridge')} required />
-                                        </div>
-                                        <MultiSelectDropdown
-                                            label="Financing Options Available In-Office"
-                                            values={formData.financingOptions}
-                                            onChange={handleCheckChange('financingOptions')}
-                                            options={['Proceed', 'CareCredit', 'Cherry', 'Sunbit', 'HFD', 'LendingClub', 'Alphaeon', 'DocPay', 'Union Financial', 'iCredit', 'Momnt', 'Free Life Funding', 'Healthcare Financing of America']}
-                                            required
-                                        />
-                                        <InputField label="Other financing options" value={formData.otherFinancing} onChange={handleTextChange('otherFinancing')} />
-
-                                        <div className="mt-6 pt-4">
-                                            <CheckboxGroup
-                                                label="Insurance Accepted (Select All that Apply)"
-                                                values={formData.insuranceAccepted}
-                                                onChange={handleCheckChange('insuranceAccepted')}
-                                                options={['Most major PPO plans', 'HMO plans', 'DMO plans', 'Medicaid', 'Medicare', 'No insurance accepted']}
-                                                required
-                                            />
-                                            <CheckboxGroup
-                                                label="Network Status"
-                                                values={formData.networkStatus}
-                                                onChange={handleCheckChange('networkStatus')}
-                                                options={['In-network with selected plans', 'Out-of-network with selected plans, but we help patients maximize benefits', 'Insurance reimburses patient only', 'Insurance reimburses office only', 'Insurance may reimburse patient or office, depending on the plan']}
-                                                required
-                                            />
-                                            <InputField label="Name of Specific Accepted Insurance Providers (optional)" value={formData.specificInsurance} onChange={handleTextChange('specificInsurance')} />
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                         </div>
                     )}
+                </Section>
+            )
+        },
+        {
+            title: "Pricing for Other Common Services",
+            content: (
+                <Section title="Pricing for Other Common Services">
+                    <p className="text-sm text-gray-600 mb-6 italic">**For internal reference only. These prices will not be used in marketing materials and are intended to help answer patient inquiries.</p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5 mb-8">
+                        <InputField label="New patient exam & X-rays:" value={formData.pricingNewExamXRays} onChange={handleTextChange('pricingNewExamXRays')} required />
+                        <InputField label="New patient exam, X-rays & Basic Cleaning:" value={formData.pricingNewExamCleaning} onChange={handleTextChange('pricingNewExamCleaning')} required />
+                        <InputField label="Basic Cleaning (standalone, if available):" value={formData.pricingBasicCleaning} onChange={handleTextChange('pricingBasicCleaning')} required />
+                        <InputField label="Deep cleaning (Per quadrant, Full mouth):" value={formData.pricingDeepCleaning} onChange={handleTextChange('pricingDeepCleaning')} required />
+                        <InputField label="Extraction (Simple to surgical price range):" value={formData.pricingExtraction} onChange={handleTextChange('pricingExtraction')} required />
+                        <InputField label="Invisalign/clear aligners:" value={formData.pricingInvisalign} onChange={handleTextChange('pricingInvisalign')} required />
+                        <InputField label="Teeth whitening (In-house & Take-home):" value={formData.pricingWhitening} onChange={handleTextChange('pricingWhitening')} required />
+                        <InputField label="Crowns (including buildup):" value={formData.pricingCrowns} onChange={handleTextChange('pricingCrowns')} required />
+                        <InputField label="Veneers:" value={formData.pricingVeneers} onChange={handleTextChange('pricingVeneers')} required />
+                        <InputField label="Bridge (per unit):" value={formData.pricingBridge} onChange={handleTextChange('pricingBridge')} required />
+                    </div>
+                </Section>
+            )
+        },
+        {
+            title: "Financing Options",
+            content: (
+                <Section title="Financing Options">
+                    <MultiSelectDropdown
+                        label="Financing Options Available In-Office"
+                        values={formData.financingOptions}
+                        onChange={handleCheckChange('financingOptions')}
+                        options={['Proceed', 'CareCredit', 'Cherry', 'Sunbit', 'HFD', 'LendingClub', 'Alphaeon', 'DocPay', 'Union Financial', 'iCredit', 'Momnt', 'Free Life Funding', 'Healthcare Financing of America']}
+                        required
+                    />
+                    <InputField label="Other financing options" value={formData.otherFinancing} onChange={handleTextChange('otherFinancing')} />
+                </Section>
+            )
+        },
+        {
+            title: "Insurance Information",
+            content: (
+                <Section title="Insurance Information">
+                    <CheckboxGroup
+                        label="Insurance Accepted (Select All that Apply)"
+                        values={formData.insuranceAccepted}
+                        onChange={handleCheckChange('insuranceAccepted')}
+                        options={['Most major PPO plans', 'HMO plans', 'DMO plans', 'Medicaid', 'Medicare', 'No insurance accepted']}
+                        required
+                    />
+                    <CheckboxGroup
+                        label="Network Status"
+                        values={formData.networkStatus}
+                        onChange={handleCheckChange('networkStatus')}
+                        options={['In-network with selected plans', 'Out-of-network with selected plans, but we help patients maximize benefits', 'Insurance reimburses patient only', 'Insurance reimburses office only', 'Insurance may reimburse patient or office, depending on the plan']}
+                        required
+                    />
+                    <InputField label="Name of Specific Accepted Insurance Providers (optional)" value={formData.specificInsurance} onChange={handleTextChange('specificInsurance')} />
                 </Section>
             )
         },
@@ -893,12 +1125,12 @@ export default function PatientExcel() {
             <div className='max-w-4xl mx-auto p-4 md:p-8'>
                 <div className='mx-auto flex flex-col justify-center max-w-[100%] gap-4'>
                     <img className='mx-auto' src="/patient_excel_logo.png" alt="logo" width={125} />
-                    <h1 className='mx-auto text-center mt-6 text-3xl md:text-4xl font-bold text-black mb-2 font-gilda-display'>
+                    <h1 className='mx-auto text-center mt-6 text-3xl md:text-4xl font-bold text-black mb-2'>
                         Patient Excel Onboarding
                     </h1>
                     <div className='relative mx-auto text-center mt-2 text-black mb-8 max-w-[80%]'>
                         <p>Please fill out your practice and promotional information to get started.</p>
-                        {process.env.NODE_ENV === 'development' && (
+                        {/* {process.env.NODE_ENV === 'development' && (
                             <button
                                 type="button"
                                 onClick={handleAutoFill}
@@ -906,7 +1138,7 @@ export default function PatientExcel() {
                             >
                                 Auto-Fill Test Data
                             </button>
-                        )}
+                        )} */}
                     </div>
 
                     {submitted ? (
@@ -915,60 +1147,100 @@ export default function PatientExcel() {
                             <p className="text-green-600">Your information has been successfully submitted to Patient Excel.</p>
                         </div>
                     ) : (
-                        <form onSubmit={handleFormSubmit} className='mx-auto w-full'>
-                            {/* Progress bar */}
-                            <div className="w-full bg-gray-200 rounded-full h-2 mb-8 mt-4 overflow-hidden">
-                                <motion.div
-                                    className="bg-blue-600 h-2 rounded-full"
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
-                                    transition={{ duration: 0.3 }}
-                                />
+                        <>
+                            {/* Step Navigation Bar */}
+                            <div
+                                ref={stepNavRef}
+                                className="flex w-full overflow-x-auto pb-4 mb-4 hide-scrollbar snap-x snap-mandatory scroll-smooth"
+                            >
+                                <div className="flex space-x-2 min-w-max mx-auto px-4">
+                                    {steps.map((step, index) => {
+                                        const complete = isStepComplete(index);
+                                        const isActive = currentStep === index;
+
+                                        return (
+                                            <button
+                                                key={index}
+                                                type="button"
+                                                onClick={() => setCurrentStep(index)}
+                                                className={`flex items-center space-x-2 px-4 py-2.5 rounded-full text-sm font-medium transition-all snap-center whitespace-nowrap border-2
+                                                    ${isActive
+                                                        ? 'bg-blue-50 border-blue-600 text-blue-700 shadow-sm'
+                                                        : 'bg-white border-transparent text-gray-600 hover:bg-gray-50'}`}
+                                            >
+                                                <span>{step.title}</span>
+                                                {complete ? (
+                                                    <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                ) : (
+                                                    <span className="relative flex h-3 w-3">
+                                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gray-400 opacity-75"></span>
+                                                        <span className="relative inline-flex rounded-full h-3 w-3 bg-gray-400"></span>
+                                                    </span>
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </div>
 
-                            <AnimatePresence mode="wait">
-                                <motion.div
-                                    key={currentStep}
-                                    initial={{ opacity: 0, x: 20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: -20 }}
-                                    transition={{ duration: 0.3, ease: 'easeInOut' }}
-                                >
-                                    {steps[currentStep].content}
-                                </motion.div>
-                            </AnimatePresence>
+                            <form onSubmit={handleFormSubmit} className='mx-auto w-full' noValidate>
+                                {/* Progress bar */}
+                                <div className="w-full bg-gray-200 rounded-full h-2 mb-8 mt-4 overflow-hidden">
+                                    <motion.div
+                                        className="bg-blue-600 h-2 rounded-full"
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
+                                        transition={{ duration: 0.3 }}
+                                    />
+                                </div>
 
-                            <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
-                                {currentStep > 0 ? (
-                                    <button
-                                        type="button"
-                                        onClick={handlePrev}
-                                        className="px-6 py-3 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
+                                <AnimatePresence mode="wait">
+                                    <motion.div
+                                        key={currentStep}
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: -20 }}
+                                        transition={{ duration: 0.3, ease: 'easeInOut' }}
                                     >
-                                        Back
-                                    </button>
-                                ) : (
-                                    <div /> // Placeholder for spacing
-                                )}
+                                        {steps[currentStep].content}
+                                    </motion.div>
+                                </AnimatePresence>
 
-                                {currentStep < steps.length - 1 ? (
-                                    <button
-                                        type="submit"
-                                        className="px-8 py-3 rounded-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-md"
-                                    >
-                                        Next
-                                    </button>
-                                ) : (
-                                    <button
-                                        type='submit'
-                                        disabled={loading}
-                                        className='px-10 py-3 rounded-lg font-semibold text-white bg-black hover:bg-gray-800 transition-colors shadow-md disabled:bg-gray-400'
-                                    >
-                                        {loading ? 'Submitting...' : 'SUBMIT INFORMATION'}
-                                    </button>
-                                )}
-                            </div>
-                        </form>
+                                <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
+                                    {currentStep > 0 ? (
+                                        <button
+                                            type="button"
+                                            onClick={handlePrev}
+                                            className="px-6 py-3 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
+                                        >
+                                            Back
+                                        </button>
+                                    ) : (
+                                        <div /> // Placeholder for spacing
+                                    )}
+
+                                    {currentStep < steps.length - 1 ? (
+                                        <button
+                                            type="button"
+                                            onClick={handleNext}
+                                            className="px-8 py-3 rounded-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-md"
+                                        >
+                                            Next
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type='submit'
+                                            disabled={loading}
+                                            className='px-10 py-3 rounded-lg font-semibold text-white bg-black hover:bg-gray-800 transition-colors shadow-md disabled:bg-gray-400'
+                                        >
+                                            {loading ? 'Submitting...' : 'SUBMIT INFORMATION'}
+                                        </button>
+                                    )}
+                                </div>
+                            </form>
+                        </>
                     )}
                 </div>
             </div>

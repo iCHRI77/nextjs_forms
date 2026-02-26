@@ -30,7 +30,7 @@ body {
   background-color: #f9fafb !important;
 }
 
-.selected-flag{
+.selected-flag {
   border: #000000 !important;
 }
 
@@ -43,4 +43,16 @@ body {
   outline: none !important;
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5) !important;
   border-color: #000000 !important;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+  /* Chrome, Safari and Opera */
 }

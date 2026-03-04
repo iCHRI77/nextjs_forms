@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '../../lib/supabaseClient';
 
 const PhoneInput = dynamic(
     () => import('react-phone-input-2').then(mod => mod.default),
@@ -591,10 +592,21 @@ export default function PatientExcel() {
             try {
                 // Send data to the desired webhook for the OTHER GHL SUBACCOUNT
                 const webhookUrl = 'https://services.leadconnectorhq.com/hooks/1gIXWAQInCRjk1efdwat/webhook-trigger/cb6b2701-c703-4e9d-82c3-a83efeb50e0b';
+                // const webhookUrl = '#';
 
                 // Format data for GHL requirements. Replace the keys below with the GHL UUIDs.
+                const timeZoneMap: Record<string, string> = {
+                    'US/Central': 'America/Chicago',
+                    'US/Eastern': 'America/New_York',
+                    'US/Mountain': 'America/Denver',
+                    'US/Pacific': 'America/Los_Angeles',
+                    'US/Alaska': 'America/Anchorage',
+                    'US/Hawaii': 'Pacific/Honolulu'
+                };
+
                 const formattedData = {
                     ...formData,
+                    timeZone: timeZoneMap[formData.timeZone] || formData.timeZone,
                     consultationTimeSlots: {
                         "Monday": formData.consultationTimeSlots.Monday,
                         "Tuesday": formData.consultationTimeSlots.Tuesday,
@@ -643,6 +655,16 @@ export default function PatientExcel() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(formattedData),
                 });
+
+                // Send data to Supabase
+                const { error: supabaseError } = await supabase
+                    .from('patient_excel_submissions')
+                    .insert([{ data: formattedData }]);
+
+                if (supabaseError) {
+                    console.error('Supabase insert error:', supabaseError);
+                }
+
                 setSubmitted(true);
             } catch (error) {
                 console.error('Webhook error:', error);
@@ -749,8 +771,8 @@ export default function PatientExcel() {
                         required
                         description={
                             <>
-                                **Lead notifications are optional. You will still receive a lead tracking sheet documenting all opt-ins.<br />
-                                **Notifications can be helpful if a lead opts in and then calls your practice directly, allowing you to quickly identify the lead source.
+                                Lead notifications are optional. You will still receive a lead tracking sheet documenting all opt-ins.<br />
+                                Notifications can be helpful if a lead opts in and then calls your practice directly, allowing you to quickly identify the lead source.
                             </>
                         }
                     />
@@ -774,7 +796,7 @@ export default function PatientExcel() {
                         <label className="text-sm font-semibold text-gray-800 relative z-10">What designated consultation time slots are reserved for patients scheduled by our team? <span className="text-red-500">*</span></label>
                         <input type="text" className="absolute top-0 left-0 w-full h-10 opacity-0 pointer-events-none" value={Object.values(formData.consultationTimeSlots).some(val => val) ? 'filled' : ''} onChange={() => { }} required />
                         <p className='text-xs text-gray-500 mb-2 italic'>
-                            **Most offices either set aside specific blocks or allow full scheduling flexibility based on available ops or PMS capacity.<br />
+                            Most offices either set aside specific blocks or allow full scheduling flexibility based on available ops or PMS capacity.<br />
                         </p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
                             {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => (
@@ -797,7 +819,7 @@ export default function PatientExcel() {
                             ))}
                         </div>
                         <p className='text-xs text-gray-500 mb-2 italic'>
-                            **Best practices include offering as much availability as possible, with a healthy balance of morning and afternoon appointments to accommodate patient schedules.
+                            Best practices include offering as much availability as possible, with a healthy balance of morning and afternoon appointments to accommodate patient schedules.
                         </p>
                     </div>
 
@@ -842,7 +864,7 @@ export default function PatientExcel() {
                     </div>
 
                     <p className='text-xs text-gray-500 mb-2 italic'>
-                        **Patients are informed of a no-call, no-show fee at the time of scheduling. Card details are collected and shared with your team if you choose to enforce the fee. Most partners do not enforce it and instead use it as a psychological commitment to support strong show rates. Enforcement is at your discretion.
+                        Patients are informed of a no-call, no-show fee at the time of scheduling. Card details are collected and shared with your team if you choose to enforce the fee. Most partners do not enforce it and instead use it as a psychological commitment to support strong show rates. Enforcement is at your discretion.
                     </p>
 
                     <InputField
@@ -851,11 +873,11 @@ export default function PatientExcel() {
                         onChange={handleTextChange('apptDetailsEmail')}
                         type="text"
                         required
-                        description="**(For multiple emails, separate them with commas) Slack allows a maximum of two seats. We recommend inviting the main office email, which can be used by all team members to log in using a six-digit code sent to that inbox. There is no limit on the number of users or devices logged in at the same time."
+                        description="(For multiple emails, separate them with commas) Slack allows a maximum of two seats. We recommend inviting the main office email, which can be used by all team members to log in using a six-digit code sent to that inbox. There is no limit on the number of users or devices logged in at the same time."
                     />
 
                     <p className='text-xs text-gray-500 mb-2 italic'>
-                        **Patients should be added to your PMS as quickly as possible so they receive standard confirmation and reminder messages, which supports higher show rates.
+                        Patients should be added to your PMS as quickly as possible so they receive standard confirmation and reminder messages, which supports higher show rates.
                     </p>
 
                     <InputField
@@ -864,7 +886,7 @@ export default function PatientExcel() {
                         onChange={handleTextChange('surveyEmail')}
                         type="text"
                         required
-                        description="**(For multiple emails, separate them with commas) Surveys are sent automatically one hour after the patient’s appointment start time. They include quick multiple-choice questions and take roughly 30 seconds to complete."
+                        description="(For multiple emails, separate them with commas) Surveys are sent automatically one hour after the patient’s appointment start time. They include quick multiple-choice questions and take roughly 30 seconds to complete."
                     />
                 </Section>
             )
@@ -954,9 +976,9 @@ export default function PatientExcel() {
                                     options={['Local anesthetic', 'Local sedation', 'IV sedation', 'Removal of unhealthy or remaining teeth (if needed)', 'Bone grafting and bone reduction (if needed)', 'Surgical implant placement', 'Fixed arch placed at the day of surgery', 'Not Offered']}
                                     required
                                 />
-                                {formData.hybridIncluded.includes('Not Offered') && (
-                                    <InputField label="Material used in hybrid solution:" value={formData.hybridMaterial} onChange={handleTextChange('hybridMaterial')} description="(PMMA, Resin, Other)" />
-                                )}
+
+                                <InputField label="Material used in hybrid solution:" value={formData.hybridMaterial} onChange={handleTextChange('hybridMaterial')} description="(PMMA, Resin, Other)" />
+
 
                                 <CheckboxGroup
                                     label="Implant-Retained Dentures (Snap-On) (Select All that Apply)"
@@ -1027,7 +1049,7 @@ export default function PatientExcel() {
             title: "Pricing for Other Common Services",
             content: (
                 <Section title="Pricing for Other Common Services">
-                    <p className="text-sm text-gray-600 mb-6 italic">**For internal reference only. These prices will not be used in marketing materials and are intended to help answer patient inquiries.</p>
+                    <p className="text-sm text-gray-600 mb-6 italic">For internal reference only. These prices will not be used in marketing materials and are intended to help answer patient inquiries.</p>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5 mb-8">
                         <InputField label="New patient exam & X-rays:" value={formData.pricingNewExamXRays} onChange={handleTextChange('pricingNewExamXRays')} required />
@@ -1130,7 +1152,7 @@ export default function PatientExcel() {
                     </h1>
                     <div className='relative mx-auto text-center mt-2 text-black mb-8 max-w-[80%]'>
                         <p>Please fill out your practice and promotional information to get started.</p>
-                        {/* {process.env.NODE_ENV === 'development' && (
+                        {process.env.NODE_ENV === 'development' && (
                             <button
                                 type="button"
                                 onClick={handleAutoFill}
@@ -1138,7 +1160,7 @@ export default function PatientExcel() {
                             >
                                 Auto-Fill Test Data
                             </button>
-                        )} */}
+                        )}
                     </div>
 
                     {submitted ? (

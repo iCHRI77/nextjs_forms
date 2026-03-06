@@ -29,11 +29,10 @@ export async function POST(req: NextRequest) {
 
     // 3. Almacenamiento en Supabase Storage
     const fileName = `submission-${Date.now()}.pdf`;
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('form-submissions')
       .upload(fileName, pdfBuffer, {
         contentType: 'application/pdf',
-        contentDisposition: `attachment; filename="${fileName}"`,
         cacheControl: '3600',
         upsert: false,
       });
@@ -76,10 +75,11 @@ export async function POST(req: NextRequest) {
       pdf_url: publicUrl,
     }, { status: 200 });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error en Route Handler:', error);
     return NextResponse.json(
-      { error: 'Error interno del servidor.', details: error.message },
+      { error: 'Error interno del servidor.', details: errorMessage },
       { status: 500 }
     );
   }

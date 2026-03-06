@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../lib/supabaseClient';
+import { downloadPatientExcelPDF } from '../../lib/PatientExcelPDF';
 
 const PhoneInput = dynamic(
     () => import('react-phone-input-2').then(mod => mod.default),
@@ -370,7 +371,7 @@ const COUNTRIES = [
 
 const initialData = {
     // Client Info
-    clientFullName: '', mainOfficePhone: '+1', dentalPracticeName: '',
+    clientFullName: '', mainOfficePhone: '+1', dentalPracticeName: '', languagesSpoken: '',
     // Address
     streetAddress: '', city: '', state: '', zipCode: '', country: '',
     multipleLocations: '', additionalLocations: '', timeZone: '',
@@ -441,6 +442,7 @@ export default function PatientExcel() {
             clientFullName: 'test testing',
             mainOfficePhone: '+12345678912',
             dentalPracticeName: 'Random Dental Care',
+            languagesSpoken: 'English, Spanish',
             streetAddress: '123 Random St',
             city: 'Random City',
             state: 'NY',
@@ -450,12 +452,12 @@ export default function PatientExcel() {
             additionalLocations: '',
             timeZone: 'US/Eastern',
             receiveLeadNotifications: 'Yes',
-            leadNotificationEmail: 'test@randomdental.com',
+            leadNotificationEmail: 'test@yopmail.com',
             consultationTimeSlots: { Monday: '9am-5pm', Tuesday: '9am-5pm', Wednesday: '9am-5pm', Thursday: '9am-5pm', Friday: '9am-5pm', Saturday: '', Sunday: '' },
             appointmentDetails: { minAppointmentNotice: '24 hours', appointmentDuration: '60 min', maxAppointmentsPerDay: '10', noCallNoShowFee: 50 },
             sameDayAppointments: 'Yes',
-            apptDetailsEmail: 'appointments@randomdental.com',
-            surveyEmail: 'survey@randomdental.com',
+            apptDetailsEmail: 'test@yopmail.com',
+            surveyEmail: 'test@yopmail.com',
             treatmentsPromoted: ['Dental Implants', 'Invisalign / Clear Aligners'],
             implantIncluded: ['Complimentary consultation', 'Oral exam', 'X-rays'],
             diagnosticImagingPricing: 'Free',
@@ -513,7 +515,7 @@ export default function PatientExcel() {
     const isStepComplete = (index: number): boolean => {
         switch (index) {
             case 0:
-                return !!(formData.clientFullName && formData.mainOfficePhone && formData.dentalPracticeName);
+                return !!(formData.clientFullName && formData.mainOfficePhone && formData.dentalPracticeName && formData.languagesSpoken);
             case 1:
                 return !!(formData.streetAddress && formData.city && formData.state && formData.zipCode && formData.country && formData.multipleLocations && formData.timeZone);
             case 2:
@@ -566,6 +568,13 @@ export default function PatientExcel() {
     const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
+        // If not on the last step, just go to next step
+        if (currentStep < steps.length - 1) {
+            handleNext();
+            return;
+        }
+
+        // We are on the last step, validate ALL steps before submitting
         const validateFormLocally = (): number => {
             for (let i = 0; i < steps.length; i++) {
                 if (!isStepComplete(i)) {
@@ -575,104 +584,89 @@ export default function PatientExcel() {
             return -1;
         };
 
-        if (currentStep < steps.length - 1) {
-            handleNext();
-        } else {
-            const invalidStep = validateFormLocally();
-            if (invalidStep !== -1) {
-                setCurrentStep(invalidStep);
-                setTimeout(() => {
-                    const form = e.target as HTMLFormElement;
+        const invalidStep = validateFormLocally();
+        if (invalidStep !== -1) {
+            setCurrentStep(invalidStep);
+            setTimeout(() => {
+                const form = e.target as HTMLFormElement;
+                if (form && typeof form.reportValidity === 'function') {
                     form.reportValidity();
-                }, 400); // Ensure Framer Motion animation completes before reporting validity
-                return;
-            }
-
-            setLoading(true);
-            try {
-                // Send data to the desired webhook for the OTHER GHL SUBACCOUNT
-                const webhookUrl = 'https://services.leadconnectorhq.com/hooks/1gIXWAQInCRjk1efdwat/webhook-trigger/cb6b2701-c703-4e9d-82c3-a83efeb50e0b';
-                // const webhookUrl = '#';
-
-                // Format data for GHL requirements. Replace the keys below with the GHL UUIDs.
-                const timeZoneMap: Record<string, string> = {
-                    'US/Central': 'America/Chicago',
-                    'US/Eastern': 'America/New_York',
-                    'US/Mountain': 'America/Denver',
-                    'US/Pacific': 'America/Los_Angeles',
-                    'US/Alaska': 'America/Anchorage',
-                    'US/Hawaii': 'Pacific/Honolulu'
-                };
-
-                const formattedData = {
-                    ...formData,
-                    timeZone: timeZoneMap[formData.timeZone] || formData.timeZone,
-                    consultationTimeSlots: {
-                        "Monday": formData.consultationTimeSlots.Monday,
-                        "Tuesday": formData.consultationTimeSlots.Tuesday,
-                        "Wednesday": formData.consultationTimeSlots.Wednesday,
-                        "Thursday": formData.consultationTimeSlots.Thursday,
-                        "Friday": formData.consultationTimeSlots.Friday,
-                        "Saturday": formData.consultationTimeSlots.Saturday,
-                        "Sunday": formData.consultationTimeSlots.Sunday
-                    },
-                    appointmentDetails: {
-                        "minAppointmentNotice": formData.appointmentDetails.minAppointmentNotice,
-                        "appointmentDuration": formData.appointmentDetails.appointmentDuration,
-                        "maxAppointmentsPerDay": formData.appointmentDetails.maxAppointmentsPerDay,
-                        "noCallNoShowFee": formData.appointmentDetails.noCallNoShowFee
-                    },
-                    implantPricingRange: {
-                        "FixedZirconiaArch": formData.implantPricingRange.FixedZirconiaArch,
-                        "HybridFixedSolution": formData.implantPricingRange.HybridFixedSolution,
-                        "SnapOn": formData.implantPricingRange.SnapOn,
-                        "SingleImplant": formData.implantPricingRange.SingleImplant
-                    },
-                    invisalignPricingDetails: {
-                        "brand": formData.invisalignBrand,
-                        "discount": formData.invisalignDiscount
-                    },
-                    invisalignTreatmentPriceRange: {
-                        "comprehensive": formData.invisalignPriceComp,
-                        "express": formData.invisalignPriceExpress
-                    },
-                    pricingOtherCommonServices: {
-                        "pricingNewExamXRays": formData.pricingNewExamXRays,
-                        "pricingNewExamCleaning": formData.pricingNewExamCleaning,
-                        "pricingBasicCleaning": formData.pricingBasicCleaning,
-                        "pricingDeepCleaning": formData.pricingDeepCleaning,
-                        "pricingExtraction": formData.pricingExtraction,
-                        "pricingInvisalign": formData.pricingInvisalign,
-                        "pricingWhitening": formData.pricingWhitening,
-                        "pricingCrowns": formData.pricingCrowns,
-                        "pricingVeneers": formData.pricingVeneers,
-                        "pricingBridge": formData.pricingBridge
-                    }
-                };
-
-                await fetch(webhookUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formattedData),
-                });
-
-                // Send data to Supabase
-                const { error: supabaseError } = await supabase
-                    .from('patient_excel_submissions')
-                    .insert([{ data: formattedData }]);
-
-                if (supabaseError) {
-                    console.error('Supabase insert error:', supabaseError);
                 }
-
-                setSubmitted(true);
-            } catch (error) {
-                console.error('Webhook error:', error);
-                setSubmitted(true);
-            }
-            setLoading(false);
+            }, 400); // Ensure Framer Motion animation completes before reporting validity
+            return;
         }
+
+        setLoading(true);
+        try {
+            // Send data to the desired webhook for the OTHER GHL SUBACCOUNT
+            const webhookUrl = 'https://services.leadconnectorhq.com/hooks/1gIXWAQInCRjk1efdwat/webhook-trigger/cb6b2701-c703-4e9d-82c3-a83efeb50e0b';
+
+
+            // Format data for GHL requirements
+            const timeZoneMap: Record<string, string> = {
+                'US/Central': 'America/Chicago',
+                'US/Eastern': 'America/New_York',
+                'US/Mountain': 'America/Denver',
+                'US/Pacific': 'America/Los_Angeles',
+                'US/Alaska': 'America/Anchorage',
+                'US/Hawaii': 'Pacific/Honolulu'
+            };
+
+            const formattedData = {
+                ...formData,
+                timeZone: timeZoneMap[formData.timeZone] || formData.timeZone,
+                consultationTimeSlots: { ...formData.consultationTimeSlots },
+                appointmentDetails: { ...formData.appointmentDetails },
+                implantPricingRange: { ...formData.implantPricingRange },
+                invisalignPricingDetails: {
+                    "brand": formData.invisalignBrand,
+                    "discount": formData.invisalignDiscount
+                },
+                invisalignTreatmentPriceRange: {
+                    "comprehensive": formData.invisalignPriceComp,
+                    "express": formData.invisalignPriceExpress
+                },
+                pricingOtherCommonServices: {
+                    "pricingNewExamXRays": formData.pricingNewExamXRays,
+                    "pricingNewExamCleaning": formData.pricingNewExamCleaning,
+                    "pricingBasicCleaning": formData.pricingBasicCleaning,
+                    "pricingDeepCleaning": formData.pricingDeepCleaning,
+                    "pricingExtraction": formData.pricingExtraction,
+                    "pricingInvisalign": formData.pricingInvisalign,
+                    "pricingWhitening": formData.pricingWhitening,
+                    "pricingCrowns": formData.pricingCrowns,
+                    "pricingVeneers": formData.pricingVeneers,
+                    "pricingBridge": formData.pricingBridge
+                }
+            };
+
+            await fetch(webhookUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formattedData),
+            });
+
+            // Send data to Supabase
+            const { error: supabaseError } = await supabase
+                .from('patient_excel_submissions')
+                .insert([{ data: formattedData }]);
+
+            if (supabaseError) {
+                console.error('Supabase insert error:', supabaseError);
+            }
+
+            setSubmitted(true);
+
+            // Automatic PDF Download
+            await downloadPatientExcelPDF(formData);
+
+        } catch (error) {
+            console.error('Webhook error:', error);
+            setSubmitted(true);
+        }
+        setLoading(false);
     };
+
 
     const handleTextChange = (field: string) => (e: any) => {
         setFormData((prev: any) => ({ ...prev, [field]: e.target.value }));
@@ -699,6 +693,7 @@ export default function PatientExcel() {
                         />
                     </div>
                     <InputField label="Dental Practice Name" value={formData.dentalPracticeName} onChange={handleTextChange('dentalPracticeName')} required />
+                    <InputField label="What Languages are Spoken in your office?" value={formData.languagesSpoken} onChange={handleTextChange('languagesSpoken')} required />
                 </Section>
             )
         },
@@ -1164,9 +1159,10 @@ export default function PatientExcel() {
                     </div>
 
                     {submitted ? (
-                        <div className="bg-green-50 p-8 rounded-xl text-center">
+                        <div className="bg-green-50 p-8 rounded-xl text-center space-y-4">
                             <h2 className="text-2xl font-bold text-green-700 mb-2">Thank you!</h2>
                             <p className="text-green-600">Your information has been successfully submitted to Patient Excel.</p>
+                            <p className="text-sm text-green-500 font-medium italic animate-pulse">Your PDF summary has been generated and should be downloading automatically...</p>
                         </div>
                     ) : (
                         <>
@@ -1207,7 +1203,18 @@ export default function PatientExcel() {
                                 </div>
                             </div>
 
-                            <form onSubmit={handleFormSubmit} className='mx-auto w-full' noValidate>
+                            <form
+                                onSubmit={(e) => {
+                                    e.preventDefault();
+                                    if (currentStep < steps.length - 1) {
+                                        handleNext();
+                                    } else {
+                                        handleFormSubmit(e);
+                                    }
+                                }}
+                                className='mx-auto w-full'
+                                noValidate
+                            >
                                 {/* Progress bar */}
                                 <div className="w-full bg-gray-200 rounded-full h-2 mb-8 mt-4 overflow-hidden">
                                     <motion.div
@@ -1234,19 +1241,27 @@ export default function PatientExcel() {
                                     {currentStep > 0 ? (
                                         <button
                                             type="button"
-                                            onClick={handlePrev}
+                                            key="back-button"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                handlePrev();
+                                            }}
                                             className="px-6 py-3 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
                                         >
                                             Back
                                         </button>
                                     ) : (
-                                        <div /> // Placeholder for spacing
+                                        <div key="spacer" /> // Placeholder for spacing
                                     )}
 
                                     {currentStep < steps.length - 1 ? (
                                         <button
                                             type="button"
-                                            onClick={handleNext}
+                                            key="next-button"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                handleNext();
+                                            }}
                                             className="px-8 py-3 rounded-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-md"
                                         >
                                             Next
@@ -1254,6 +1269,7 @@ export default function PatientExcel() {
                                     ) : (
                                         <button
                                             type='submit'
+                                            key="submit-button"
                                             disabled={loading}
                                             className='px-10 py-3 rounded-lg font-semibold text-white bg-black hover:bg-gray-800 transition-colors shadow-md disabled:bg-gray-400'
                                         >
@@ -1262,6 +1278,7 @@ export default function PatientExcel() {
                                     )}
                                 </div>
                             </form>
+
                         </>
                     )}
                 </div>

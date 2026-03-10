@@ -657,9 +657,6 @@ export default function PatientExcel() {
 
             setSubmitted(true);
 
-            // Automatic PDF Download
-            await downloadPatientExcelPDF(formData);
-
         } catch (error) {
             console.error('Webhook error:', error);
             setSubmitted(true);
@@ -1157,12 +1154,33 @@ export default function PatientExcel() {
                             </button>
                         )}
                     </div>
-
                     {submitted ? (
-                        <div className="bg-green-50 p-8 rounded-xl text-center space-y-4">
-                            <h2 className="text-2xl font-bold text-green-700 mb-2">Thank you!</h2>
-                            <p className="text-green-600">Your information has been successfully submitted to Patient Excel.</p>
-                            <p className="text-sm text-green-500 font-medium italic animate-pulse">Your PDF summary has been generated and should be downloading automatically...</p>
+                        <div className="bg-green-50 p-8 rounded-xl text-center space-y-6">
+                            <div className="flex justify-center">
+                                <div className="bg-green-100 p-3 rounded-full">
+                                    <svg className="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-bold text-green-700 mb-2">Thank you!</h2>
+                                <p className="text-green-600">Your information has been successfully submitted to Patient Excel.</p>
+                            </div>
+
+                            <div className="pt-6 border-t border-green-100">
+                                <p className="text-sm text-gray-600 mb-4">You can now download a PDF summary of your onboarding information for your records.</p>
+                                <button
+                                    type="button"
+                                    onClick={() => downloadPatientExcelPDF(formData)}
+                                    className="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors shadow-md gap-2"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    Download PDF Summary
+                                </button>
+                            </div>
                         </div>
                     ) : (
                         <>
